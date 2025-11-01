@@ -2,16 +2,17 @@
 # 此文件不可更改
 
 from abc import ABCMeta, abstractmethod
+from multiprocessing import Pool, cpu_count
 import time
 import h5py as h5
-from multiprocessing import Pool, cpu_count
 import numpy as np
-from scipy.integrate import quad
+from scipy.integrate import quad, simpson, trapezoid
 
 PMT_NUM = 17612  # PMT数量
 T_MAX = 1000  # probe函数积分上限(ns)
 
-NV = 1000  # 一致性检测取点数
+NV = 1000  # 检测取点数
+NT = 100000  # 积分时间取点数
 PROCESS_MAX = cpu_count() // 4  # 最大进程数
 
 class ConcatInfo:
@@ -80,7 +81,7 @@ class ProbeBase(metaclass=ABCMeta):
         def lc(t):
             return self.get_lc(np.array([r]), np.array([theta]), np.array([t]))[0]
 
-        integral, _ = quad(lc, 0, T_MAX, limit=10000, epsabs=1e-6, epsrel=1e-4)
+        integral, _ = quad(lc, 0, T_MAX, limit=NT, epsabs=1e-6, epsrel=1e-4)
         return integral
 
     def is_consistent(self) -> bool:
@@ -91,22 +92,79 @@ class ProbeBase(metaclass=ABCMeta):
 
         marginal = self.get_mu(rs, thetas)
 
-        with Pool(processes=min(PROCESS_MAX, NV)) as pool:
-            integral = pool.starmap(
-                self._integrate_point, zip(rs, thetas)
-            )
-
         # 较为严格的一致性检测
-        if np.allclose(marginal, integral, rtol=5e-4, atol=1e-5):
+        atol = 1e-6
+        rtol = 1e-3
+        # 使用 quad 积分
+        with Pool(processes=min(PROCESS_MAX, NV)) as pool:
+            integral = np.array(pool.starmap(
+                self._integrate_point, zip(rs, thetas))
+            )
+        error_quad = marginal - integral
+        error_limit_quad = atol + rtol * integral
+        if np.sum(error_quad < error_limit_quad) >= int(0.99 * NV):
             return True
+        # 使用 simpson 积分
+        ts = np.linspace(0, T_MAX, NT+1)
+        lc = self.get_lc(rs[:,None], thetas[:,None], ts[None,:])
+        integral = simpson(lc, ts, axis=1)
+        error_simpson = marginal - integral
+        error_limit_simpson = atol + rtol * integral
+        if np.sum(error_simpson < error_limit_simpson) >= int(0.99 * NV):
+            return True
+        # 使用 trapz 积分
+        integral = trapezoid(lc, ts, axis=1)
+        error_trapezoid = marginal - integral
+        error_limit_trapezoid = atol + rtol * integral
+        if np.sum(error_trapezoid < error_limit_trapezoid) >= int(0.99 * NV):
+            return True
+
         # 较为宽松的一致性检测
-        elif np.allclose(marginal, integral, rtol=1e-2, atol=1e-3):
+        def warning():
             print("\033[33m[Warning] Your get_mu() function implementation may have some issues, "\
                   "but it is basically consistent with get_lc(), so the grading will continue.\033[0m")
+        if np.sum(error_quad < error_limit_quad) >= int(0.9 * NV):
+            warning()
             return True
+        if np.sum(error_simpson < error_limit_simpson) >= int(0.9 * NV):
+            warning()
+            return True
+        if np.sum(error_trapezoid < error_limit_trapezoid) >= int(0.9 * NV):
+            warning()
+            return True
+        if np.sum(error_quad < 10 * error_limit_quad) >= int(0.99 * NV):
+            warning()
+            return True
+        if np.sum(error_simpson < 10 * error_limit_simpson) >= int(0.99 * NV):
+            warning()
+            return True
+        if np.sum(error_trapezoid < 10 * error_limit_trapezoid) >= int(0.99 * NV):
+            warning()
+            return True
+
         # 未通过一致性检测
+        print("\033[31m[Error] Your get_mu() function is not consistent with get_lc().\033[0m")
+        return False
+
+    def is_nondelta(self, pe_rs, pe_thetas, pe_ts) -> bool:
+        "无 delta 峰检测"
+        np.random.seed(time.time_ns() % 65536)
+        index = np.random.choice(len(pe_rs), size=NV)
+        rs = pe_rs[index]
+        thetas = pe_thetas[index]
+        ts = pe_ts[index]
+
+        mu = self.get_mu(rs, thetas)
+        lc = self.get_lc(rs, thetas, ts)
+
+        if np.all(lc < 0.1 * mu):
+            return True
+        elif np.all(lc < mu):
+            print("\033[33m[Warning] Your get_lc() function has some significantly larger values, "\
+                  "but they are still within an acceptable range, so the grading will continue.\033[0m")
+            return True
         else:
-            print("\033[31m[Error] Your get_mu() function is not consistent with get_lc().\033[0m")
+            print("\033[31m[Error] Your get_lc() function has some unreasonable extremely large values.\033[0m")
             return False
 
     def validate(self, v_rs, v_thetas, pe_rs, pe_thetas, pe_ts):
@@ -127,6 +185,7 @@ class ProbeBase(metaclass=ABCMeta):
             似然函数的对数值
         """
         assert self.is_consistent()
+        assert self.is_nondelta(pe_rs, pe_thetas, pe_ts)
 
         mu = self.get_mu(v_rs, v_thetas)
         if mu.shape != v_rs.shape:

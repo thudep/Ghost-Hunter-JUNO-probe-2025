@@ -21,8 +21,10 @@ PROCESS_MAX = cpu_count() // 4
 
 # 统计函数
 def count(arguments):
-    i, argument, geo_theta, geo_phi = arguments
-    data, rbins, thetabins, tbins = argument
+    data_file, bins, geo = arguments
+    i, data = data_file
+    rbins, thetabins, tbins = bins
+    geo_theta, geo_phi = geo
 
     # 数据集读取
     with h5.File(f"{data}/{i}.h5", 'r') as h5file_r:
@@ -84,10 +86,9 @@ def main():
     geo_phi = np.deg2rad(geo["phi"][None, :PMT_NUM])
 
     # 使用 PROCESS 个进程分别处理 N0 个数据集
+    params = [((i, args.data), (rbins, thetabins, tbins), (geo_theta, geo_phi)) for i in Seq]
     with Pool(processes=min(PROCESS_MAX, N0)) as pool:
-        results = pool.map(
-            count, zip(Seq, zip([args.data]*N0, [rbins]*N0, [thetabins]*N0,
-                                [tbins]*N0, ), [geo_theta]*N0, [geo_phi]*N0))
+        results = pool.map(count, params)
 
     # 拆出处理结果 pe_num 与 vertex_num
     pe_num = np.sum([r[0] for r in results], axis=0)

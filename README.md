@@ -54,7 +54,7 @@
 
 ### 测试集
 
-测试集文件名为 `concat.h5` , 包含 **`"Concat`** 以及 **`Vertices`** 两个 **dataset**, 其格式为:
+测试集文件名为 `concat.h5` , 包含 **`Concat`** 以及 **`Vertices`** 两个 **dataset**, 其格式为:
 
 **`Concat`**
 
@@ -81,7 +81,7 @@
 
 任务是修改 [`probe.py`](./probe.py) 中的 `get_mu()` 与 `get_lc()` 函数, 构造出含时与不含时的 probe 函数, 尽量使分数更高. 当前的 [`probe.py`](./probe.py) 是依赖于 [`histogram.py`](./histogram.py) 生成的直方图 [`histogram.h5`](./histogram.h5) 来构造 probe 函数, 如果你采取不同的方案, 也可以删除 [`histogram.py`](./histogram.py) .
 
-请**不要更改** [`coefficient.py`](./coefficient.py) 与 [`grade.py`](./grade.py) , 如果发现更改则被视为作弊, 成绩无效. 其它文件均可修改, 也可以添加额外的文件, 但请确保 [`Makefile`](./Makefile) 中的 `make score` 可以正常运行, 如果你发现你引用的包在我们的环境中没有提供; 你也可以与组委会联系, 征得同意后可以修改 [ci](./.gitea/workflows/score.yaml) 以下载包.
+请**不要更改** [`coefficient.py`](./coefficient.py) 与 [`grade.py`](./grade.py) , 如果发现更改则被视为作弊, 成绩无效. 其它文件均可修改, 也可以添加额外的文件, 但请确保 [`Makefile`](./Makefile) 中的 `make score` 可以正常运行; 如果你发现你引用的包在我们的环境中没有提供, 你也可以与组委会联系, 征得同意后可以修改 [ci](./.gitea/workflows/score.yaml) 以下载包.
 
 我们将提供一个测试集供大家在本地评分作为参考. 但是, **为了防止大家对着测试集过拟合, 本地评测分数及CI排行仅供参考, 最终的排名将由隐藏测例来决定!**
 
