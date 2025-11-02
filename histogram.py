@@ -8,7 +8,7 @@ import numpy as np
 # PMT数量
 PMT_NUM = 17612
 # 液闪区域半径(mm)
-R0 = 17710
+R0 = 17700
 # 数据文件个数与编号
 N0 = 1
 Seq = np.arange(16001, 16001+N0)
