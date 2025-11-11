@@ -7,7 +7,7 @@ jobs:
     runs-on: ghci
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: https://gitee.com/github-actions/checkout@v4
     - name: Score
       run: |
         make score > log
