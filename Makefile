@@ -1,5 +1,5 @@
 BASE_URL := https://ghfile.thudep.com:7200
-WGET := wget
+WGET := wget -q --show-progress
 
 geo.h5:
 	$(WGET) $(BASE_URL)/geo/geo.h5
