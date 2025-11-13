@@ -10,7 +10,7 @@ jobs:
       uses: https://gitee.com/github-actions/checkout@v4
     - name: Score
       run: |
-        make score > log
+        make score | tee log
         echo "Your score is $(cat log | grep -Po "(?<=^upload score: )[0-9]+\.[0-9]+\$")"
         curl --location 'https://gh-leaderboard.thudep.com/' \
         --header 'Content-Type: application/json' \
