@@ -1,5 +1,5 @@
 BASE_URL := https://ghfile.thudep.com:7200
-WGET := wget -q --show-progress
+WGET := wget --no-verbose --progress=bar:force:noscroll
 
 geo.h5:
 	$(WGET) $(BASE_URL)/geo/geo.h5
