@@ -12,14 +12,14 @@ def validate(probe: ProbeBase, c: ConcatInfo) -> float:
 
 def get_score(lln: float) -> float:
     "根据似然函数的对数的归一化结果, 进行评分"
-    if lln < -17000:
-        return 10 * np.exp(lln + 17000)
-    elif lln < -9000:
-        return (lln + 17000) / 100 + 10
-    elif lln < -8500:
-        return (lln + 9000) / 500 * 9 + 90
+    if lln < -17500:
+        return 40 * np.exp((lln + 17500) / 1000)
+    elif lln < -13500:
+        return (lln + 17500) / 100 + 40
+    elif lln < -13000:
+        return (lln + 13500) / 50 + 80
     else:
-        return 100 - np.exp(- (lln + 8500))
+        return 100 - 10 * np.exp(- (lln + 13000) / 100)
 
 
 def main():
