@@ -95,50 +95,50 @@ class ProbeBase(metaclass=ABCMeta):
         # 较为严格的一致性检测
         atol = 1e-6
         rtol = 1e-3
-        # 使用 quad 积分
-        with Pool(processes=min(PROCESS_MAX, NV)) as pool:
-            integral = np.array(pool.starmap(
-                self._integrate_point, zip(rs, thetas))
-            )
-        error_quad = marginal - integral
-        error_limit_quad = atol + rtol * integral
-        if np.sum(error_quad < error_limit_quad) >= int(0.99 * NV):
-            return True
         # 使用 simpson 积分
         ts = np.linspace(0, T_MAX, NT+1)
         lc = self.get_lc(rs[:,None], thetas[:,None], ts[None,:])
         integral = simpson(lc, ts, axis=1)
-        error_simpson = marginal - integral
+        error_simpson = np.abs(marginal - integral)
         error_limit_simpson = atol + rtol * integral
         if np.sum(error_simpson < error_limit_simpson) >= int(0.99 * NV):
             return True
         # 使用 trapz 积分
         integral = trapezoid(lc, ts, axis=1)
-        error_trapezoid = marginal - integral
+        error_trapezoid = np.abs(marginal - integral)
         error_limit_trapezoid = atol + rtol * integral
         if np.sum(error_trapezoid < error_limit_trapezoid) >= int(0.99 * NV):
+            return True
+        # 使用 quad 积分
+        with Pool(processes=min(PROCESS_MAX, NV)) as pool:
+            integral = np.array(pool.starmap(
+                self._integrate_point, zip(rs, thetas))
+            )
+        error_quad = np.abs(marginal - integral)
+        error_limit_quad = atol + rtol * integral
+        if np.sum(error_quad < error_limit_quad) >= int(0.99 * NV):
             return True
 
         # 较为宽松的一致性检测
         def warning():
             print("\033[33m[Warning] Your get_mu() function implementation may have some issues, "\
                   "but it is basically consistent with get_lc(), so the grading will continue.\033[0m")
-        if np.sum(error_quad < error_limit_quad) >= int(0.9 * NV):
-            warning()
-            return True
         if np.sum(error_simpson < error_limit_simpson) >= int(0.9 * NV):
             warning()
             return True
         if np.sum(error_trapezoid < error_limit_trapezoid) >= int(0.9 * NV):
             warning()
             return True
-        if np.sum(error_quad < 10 * error_limit_quad) >= int(0.99 * NV):
+        if np.sum(error_quad < error_limit_quad) >= int(0.9 * NV):
             warning()
             return True
         if np.sum(error_simpson < 10 * error_limit_simpson) >= int(0.99 * NV):
             warning()
             return True
         if np.sum(error_trapezoid < 10 * error_limit_trapezoid) >= int(0.99 * NV):
+            warning()
+            return True
+        if np.sum(error_quad < 10 * error_limit_quad) >= int(0.99 * NV):
             warning()
             return True
 
